@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Subject, Observable } from 'rxjs';
+import { Observable, BehaviorSubject } from 'rxjs';
 import { Product } from 'src/app/pages/products/interfaces/product.interface';
 
 @Injectable({
@@ -9,9 +9,9 @@ export class ShoppingCartService {
 
   products: Product[] = [];
 
-  private cartSubject = new Subject<Product[]>();
-  private totalSubject = new Subject<number>();
-  private quantitySubject = new Subject<number>();
+  private cartSubject = new BehaviorSubject<Product[]>([]);
+  private totalSubject = new BehaviorSubject<number>(0);
+  private quantitySubject = new BehaviorSubject<number>(0);
 
   constructor() { }
 
@@ -33,18 +33,30 @@ export class ShoppingCartService {
     this.calcTotal();
   }
 
+  resetCart(): void {
+    this.products = [];
+    this.cartSubject.next(this.products);
+    this.quantitySubject.next(0);
+    this.totalSubject.next(0);
+  }
+
   private addToCart(product: Product): void {
-    this.products.push(product);
+    const isProductInCart = this.products.find(({id}) => id === product.id);
+    if (isProductInCart) {
+      isProductInCart.quantity += 1;
+    } else {
+      this.products.push({...product, quantity: 1});
+    };
     this.cartSubject.next(this.products);
   }
 
   private quantityProducts(): void {
-    const quantity = this.products.length;
+    const quantity = this.products.reduce((acc, prod) => acc += prod.quantity, 0);
     this.quantitySubject.next(quantity);
   }
 
   private calcTotal(): void {
-    const total = this.products.reduce((acc, product) => acc + product.price, 0);
+    const total = this.products.reduce((acc, prod) => acc += (prod.price * prod.quantity), 0);
     this.totalSubject.next(total);
   }
 
